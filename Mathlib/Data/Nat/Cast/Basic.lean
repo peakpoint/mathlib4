@@ -50,7 +50,7 @@ section NonAssocSemiring
 variable [NonAssocSemiring α]
 
 @[simp, norm_cast] lemma cast_mul (m n : ℕ) : ((m * n : ℕ) : α) = m * n := by
-  induction n <;> simp [mul_succ, mul_add, *]
+  induction n <;> simp [mul_add, *]
 
 variable (α) in
 /-- `Nat.cast : ℕ → α` as a `RingHom` -/
@@ -69,6 +69,9 @@ lemma _root_.nsmul_eq_mul' (a : α) (n : ℕ) : n • a = a * n := by
   | zero => rw [zero_nsmul, Nat.cast_zero, zero_mul]
   | succ n ih => rw [succ_nsmul, ih, Nat.cast_succ, add_mul, one_mul]
 
+lemma ofNat_nsmul_eq_mul (n : ℕ) [n.AtLeastTwo] (a : α) : ofNat(n) • a = ofNat(n) * a := by
+  simp [nsmul_eq_mul]
+
 end NonAssocSemiring
 
 section Semiring
@@ -79,6 +82,7 @@ lemma cast_pow (m : ℕ) : ∀ n : ℕ, ↑(m ^ n) = (m ^ n : α)
   | 0 => by simp
   | n + 1 => by rw [_root_.pow_succ', _root_.pow_succ', cast_mul, cast_pow m n]
 
+@[gcongr]
 lemma cast_dvd_cast (h : m ∣ n) : (m : α) ∣ (n : α) := map_dvd (Nat.castRingHom α) h
 
 alias _root_.Dvd.dvd.natCast := cast_dvd_cast

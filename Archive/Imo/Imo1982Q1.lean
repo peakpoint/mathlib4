@@ -80,7 +80,7 @@ lemma superhomogeneous {m n : ℕ+} : ↑n * f m ≤ f (n * m) := by
   | succ n' ih =>
     calc
     ↑(n' + 1) * f m = ↑n' * f m + f m := by rw [PNat.add_coe, add_mul, PNat.val_ofNat, one_mul]
-    _ ≤ f (n' * m) + f m := add_le_add_right ih (f m)
+    _ ≤ f (n' * m) + f m := by gcongr
     _ ≤ f (n' * m + m) := hf.superadditive
     _ = f ((n' + 1) * m) := by congr; rw [add_mul, one_mul]
 
