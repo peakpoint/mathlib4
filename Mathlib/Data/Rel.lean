@@ -64,7 +64,7 @@ Simultaneously, uniform spaces need a theory of relations on a type `α` as elem
 `Set (α × α)`, and the new definition of `Rel` fulfills this role quite well.
 -/
 
-variable {α β γ δ : Type*}
+variable {α β γ δ : Type*} {ι : Sort*}
 
 /-- A relation on `α` and `β`, aka a set-valued function, aka a partial multifunction.
 
@@ -159,6 +159,11 @@ lemma comp_assoc (R : Rel α β) (S : Rel β γ) (t : Rel γ δ) : (R ○ S) ○
 @[simp] lemma univ_comp (S : Rel β γ) : (.univ : Rel α β) ○ S = {(_b, c) : α × γ | c ∈ S.cod} := by
   aesop
 
+lemma comp_iUnion (R : Rel α β) (S : ι → Rel β γ) : R ○ ⋃ i, S i = ⋃ i, R ○ S i := by aesop
+lemma iUnion_comp (R : ι → Rel α β) (S : Rel β γ) : (⋃ i, R i) ○ S = ⋃ i, R i ○ S := by aesop
+lemma comp_sUnion (R : Rel α β) (𝒮 : Set (Rel β γ)) : R ○ ⋃₀ 𝒮 = ⋃ S ∈ 𝒮, R ○ S := by aesop
+lemma sUnion_comp (ℛ : Set (Rel α β)) (S : Rel β γ) : ⋃₀ ℛ ○ S = ⋃ R ∈ ℛ, R ○ S := by aesop
+
 @[gcongr]
 lemma comp_subset_comp {S₁ S₂ : Rel β γ} (hR : R₁ ⊆ R₂) (hS : S₁ ⊆ S₂) : R₁ ○ S₁ ⊆ R₂ ○ S₂ :=
   fun _ ↦ .imp fun _ ↦ .imp (@hR _) (@hS _)
@@ -166,6 +171,19 @@ lemma comp_subset_comp {S₁ S₂ : Rel β γ} (hR : R₁ ⊆ R₂) (hS : S₁ �
 @[gcongr]
 lemma comp_subset_comp_left {S : Rel β γ} (hR : R₁ ⊆ R₂) : R₁ ○ S ⊆ R₂ ○ S :=
   comp_subset_comp hR .rfl
+
+lemma prod_comp_prod_of_inter_nonempty (ht : (t₁ ∩ t₂).Nonempty) (s : Set α) (u : Set γ) :
+    s ×ˢ t₁ ○ t₂ ×ˢ u = s ×ˢ u := by aesop
+
+lemma prod_comp_prod_of_disjoint (ht : Disjoint t₁ t₂) (s : Set α) (u : Set γ) :
+    s ×ˢ t₁ ○ t₂ ×ˢ u = ∅ :=
+  Set.eq_empty_of_forall_notMem fun _ ⟨_z, ⟨_, hzs⟩, hzu, _⟩ ↦ Set.disjoint_left.1 ht hzs hzu
+
+lemma prod_comp_prod (s : Set α) (t₁ t₂ : Set β) (u : Set γ) [Decidable (Disjoint t₁ t₂)] :
+    s ×ˢ t₁ ○ t₂ ×ˢ u = if Disjoint t₁ t₂ then ∅ else s ×ˢ u := by
+  split_ifs with hst
+  · exact prod_comp_prod_of_disjoint hst ..
+  · rw [prod_comp_prod_of_inter_nonempty <| Set.not_disjoint_iff_nonempty_inter.1 hst]
 
 @[gcongr]
 lemma comp_subset_comp_right {S₁ S₂ : Rel β γ} (hS : S₁ ⊆ S₂) : R ○ S₁ ⊆ R ○ S₂ :=
