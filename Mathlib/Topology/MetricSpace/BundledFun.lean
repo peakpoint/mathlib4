@@ -195,23 +195,23 @@ end IsUltra
 
 section ball
 
-lemma isSymmetricRel_ball [Add R] [Zero R] [Preorder R] (d : PseudoMetric X R) {ε : R} :
-    IsSymmetricRel {xy | d xy.1 xy.2 < ε} := by
-  simp [IsSymmetricRel, d.symm]
+instance isSymm_ball [Add R] [Zero R] [Preorder R] (d : PseudoMetric X R) {ε : R} :
+    Rel.IsSymm {xy | d xy.1 xy.2 < ε} where
+  symm := by simp [d.symm]
 
-lemma isSymmetricRel_closedBall [Add R] [Zero R] [LE R] (d : PseudoMetric X R) {ε : R} :
-    IsSymmetricRel {xy | d xy.1 xy.2 ≤ ε} := by
-  simp [IsSymmetricRel, d.symm]
+instance isSymm_closedBall [Add R] [Zero R] [LE R] (d : PseudoMetric X R) {ε : R} :
+    Rel.IsSymm {xy | d xy.1 xy.2 ≤ ε} where
+  symm := by simp [d.symm]
 
-lemma IsUltra.isTransitiveRel_ball [Add R] [Zero R] [LinearOrder R] (d : PseudoMetric X R)
+instance IsUltra.isTrans_ball [Add R] [Zero R] [LinearOrder R] (d : PseudoMetric X R)
     [d.IsUltra] {ε : R} :
-    IsTransitiveRel {xy | d xy.1 xy.2 < ε} :=
-  fun _ _ _ hxy hyz ↦ le_sup.trans_lt (max_lt hxy hyz)
+    Rel.IsTrans {xy | d xy.1 xy.2 < ε} where
+  trans _ _ _ hxy hyz := le_sup.trans_lt (max_lt hxy hyz)
 
-lemma IsUltra.isTransitiveRel_closedBall [Add R] [Zero R] [SemilatticeSup R] (d : PseudoMetric X R)
+instance IsUltra.isTrans_closedBall [Add R] [Zero R] [SemilatticeSup R] (d : PseudoMetric X R)
     [d.IsUltra] {ε : R} :
-    IsTransitiveRel {xy | d xy.1 xy.2 ≤ ε} :=
-  fun _ _ _ hxy hyz ↦ le_sup.trans (sup_le hxy hyz)
+    Rel.IsTrans {xy | d xy.1 xy.2 ≤ ε} where
+  trans _ _ _ hxy hyz := le_sup.trans (sup_le hxy hyz)
 
 end ball
 
