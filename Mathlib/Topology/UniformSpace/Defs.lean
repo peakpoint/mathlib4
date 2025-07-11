@@ -86,12 +86,9 @@ and `○` for composition of relations, seen as terms with type `Set (X × X)`.
 
 ## Implementation notes
 
-There is already a theory of relations in `Data/Rel.lean` where the main definition is
-`def Rel (α β : Type*) := α → β → Prop`.
-The relations used in the current file involve only one type, but this is not the reason why
-we don't reuse `Data/Rel.lean`. We use `Rel α α`
-instead of `Rel α α` because we really need sets to use the filter library, and elements
-of filters on `α × α` have type `Rel α α`.
+We use the theory of relations as sets developed in `Mathlib/Data/Rel.lean`.
+The relevant definition is `Rel X X := Set (X × X)`, which is the type of elements of
+the uniformity filter `𝓤 X : Filter (X × X)`.
 
 The structure `UniformSpace X` bundles a uniform structure on `X`, a topology on `X` and
 an assumption saying those are compatible. This may not seem mathematically reasonable at first,
