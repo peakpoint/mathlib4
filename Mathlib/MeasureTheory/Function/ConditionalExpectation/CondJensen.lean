@@ -6,6 +6,7 @@ Authors: Yongxi Lin, Thomas Zhu
 module
 
 public import Mathlib.MeasureTheory.Function.ConditionalExpectation.Indicator
+public import Mathlib.Analysis.Convex.LinearMean.Conditional
 
 import Mathlib.Analysis.Convex.Approximation
 import Mathlib.Analysis.Convex.Continuous
@@ -33,53 +34,85 @@ open MeasureTheory Function Set Filter
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
   {α : Type*} {f : α → E} {φ : E → ℝ} {m mα : MeasurableSpace α} {μ : Measure α} {s : Set E}
 
-private lemma Convex.condExp_mem_of_hereditarilyLindelofSpace [IsFiniteMeasure μ]
-    [HereditarilyLindelofSpace E] (hm : m ≤ mα) (hf_int : Integrable f μ) (hs : IsClosed s)
-    (hc : Convex ℝ s) (hf : ∀ᵐ a ∂μ, f a ∈ s) :
-    ∀ᵐ a ∂μ, μ[f | m] a ∈ s := by
-  obtain ⟨L, c, hLc⟩ := RCLike.iInter_countable_halfSpaces_eq (𝕜 := ℝ) hc hs
-  simp_all only [← hLc, RCLike.re_to_real, mem_iInter, ae_all_iff]
-  intro n
-  have h1 := ContinuousLinearMap.comp_condExp_comm (m := m) hf_int (L n)
-  have h2 := condExp_mono (m := m) ((L n).integrable_comp hf_int) (integrable_const (c n)) (hf n)
-  filter_upwards [h1, h2] with a ha hb
-  simp_all only [condExp_const, comp_apply]
-  exact hb
+namespace MeasureTheory.Measure
+
+variable (E) (μ)
+
+@[expose]
+noncomputable def extendedCondLinearMean [IsFiniteMeasure μ] (hm : m ≤ mα) :
+    ExtendedCondLinearMean α ℝ E where
+  toMean f := μ[f | m]
+  conegligible := ae μ
+  L := { f | Integrable f μ }
+  mem_conegligible := sorry -- same proof as in IsProbabilityMeasure.extendedLinearMean
+  add_mem ha hb := ha.add hb
+  smul_mem c f hf := hf.smul c
+  map_add' hf hg := condExp_add hf hg m
+  map_smul' c {f} _ := condExp_smul c f m
+  one_mem := integrable_const 1
+  map_one' := Filter.EventuallyEq.of_eq <| condExp_const hm 1
+  monotoneOn' f hf g hg h := condExp_mono hf hg h
+  ℒ := { f | Integrable f μ }
+  toExtendedMean f := μ[f | m]
+  map_comp' l f hf := ⟨l.integrable_comp hf, l.comp_condExp_comm hf |>.symm⟩
+
+noncomputable def extendedCondLinearMean_restrict [IsFiniteMeasure μ] (hm : m ≤ mα)
+    (C : ClosedSubmodule ℝ E) :
+    (extendedCondLinearMean E μ hm).Restrict C where
+  restrict' := extendedCondLinearMean C μ hm
+  toCondLinearMean_restrict' := rfl
+  mem_and_map_eq' := by
+    intro f hf
+    have : CompleteSpace C := by infer_instance
+    have : Integrable f μ := hf.mono
+      (Topology.IsEmbedding.subtypeVal.aestronglyMeasurable_comp_iff.1 hf.aestronglyMeasurable)
+      (by simp)
+    exact ⟨this, C.subtypeL.comp_condExp_comm this (m := m) |>.symm⟩
+
+lemma extendedCondLinearMean_conegligiblyInvariant [IsFiniteMeasure μ] (hm : m ≤ mα) :
+    extendedCondLinearMean E μ hm |>.conegligiblyInvariant where
+  mem_and_apply_eq _ hf _ hfg := ⟨hf.congr hfg, condExp_congr_ae hfg⟩
+  mem_L_and_apply_M_eq _ hf _ hfg := ⟨hf.congr hfg, condExp_congr_ae hfg⟩
+
+end MeasureTheory.Measure
 
 private lemma Convex.condExp_mem_of_isFiniteMeasure [IsFiniteMeasure μ] (hm : m ≤ mα)
     (hf_int : Integrable f μ) (hs : IsClosed s) (hc : Convex ℝ s) (hf : ∀ᵐ a ∂μ, f a ∈ s) :
     ∀ᵐ a ∂μ, μ[f | m] a ∈ s := by
-  borelize E
+  have : CountableInterFilter (μ.extendedCondLinearMean E hm).conegligible :=
+    show CountableInterFilter (ae μ) by infer_instance
   obtain ⟨t, ht, htt⟩ := hf_int.aestronglyMeasurable.isSeparable_ae_range
   let Y := (Submodule.span ℝ t).topologicalClosure
-  have : CompleteSpace Y := (Submodule.isClosed_topologicalClosure _).completeSpace_coe
+  have hY : IsClosed (Y : Set E) := Submodule.isClosed_topologicalClosure _
   have : SecondCountableTopology Y := ht.span.closure.secondCountableTopology
-  classical
-  let fY : α → Y := fun a => if h : f a ∈ Y then ⟨f a, h⟩ else 0
-  let fX : α → E := Y.subtypeL ∘ fY
   have lem0 : ∀ᵐ a ∂μ, f a ∈ Y := by
     filter_upwards [htt] with a ha using
       (Submodule.closure_subset_topologicalClosure_span t) (subset_closure ha)
-  have lem1 : f =ᵐ[μ] fX := by
-    filter_upwards [lem0] with a ha
-    simp_all [fX, fY]
-  have lem2 : ∀ᵐ a ∂μ, fY a ∈ Y.subtypeL ⁻¹' s := by
-    filter_upwards [lem0, hf] with a ha hs
-    simpa [fY, ha]
-  have hfY_int : Integrable fY μ := by
-    refine (hf_int.congr lem1).mono ?_ (by simp [fX])
-    obtain ⟨g, hg1, hg2, hg3⟩ := hf_int.1.exists_stronglyMeasurable_range_subset
-      ((Submodule.isClosed_topologicalClosure _).measurableSet) Nonempty.of_subtype lem0
-    refine ⟨codRestrict g Y hg2, (hg1.measurable.codRestrict hg2).stronglyMeasurable, ?_⟩
-    filter_upwards [hg3] with a ha
-    have : g a ∈ Y := hg2 a
-    simp_all [fY, codRestrict]
-  have lem3 : μ[f | m] =ᵐ[μ] Y.subtypeL ∘ μ[fY | m] := calc
-    _ =ᵐ[μ] μ[fX | m] := condExp_congr_ae lem1
-    _ =ᵐ[μ] _ := (Y.subtypeL.comp_condExp_comm hfY_int).symm
-  filter_upwards [(hc.linear_preimage Y.subtype).condExp_mem_of_hereditarilyLindelofSpace
-    hm hfY_int (hs.preimage Y.subtypeL.continuous) lem2, lem3] with a ha hb
-  simp_all
+  exact μ.extendedCondLinearMean E hm |>.mem_convex_of_restrict
+    hs hc hf_int hf
+    (μ.extendedCondLinearMean_restrict E hm ⟨Y, hY⟩)
+    (μ.extendedCondLinearMean_conegligiblyInvariant E hm)
+    lem0
+
+/-- Conditional Jensen's inequality for finite measures. -/
+private theorem ConvexOn.map_condExp_le_of_isFiniteMeasure [IsFiniteMeasure μ] (hm : m ≤ mα)
+    (hφ_cvx : ConvexOn ℝ s φ) (hφ_cont : LowerSemicontinuousOn φ s) (hf : ∀ᵐ a ∂μ, f a ∈ s)
+    (hs : IsClosed s) (hf_int : Integrable f μ) (hφ_int : Integrable (φ ∘ f) μ) :
+    φ ∘ μ[f | m] ≤ᵐ[μ] μ[φ ∘ f | m] := by
+  have : CountableInterFilter (μ.extendedCondLinearMean E hm).conegligible :=
+    show CountableInterFilter (ae μ) by infer_instance
+  obtain ⟨t, ht, htt⟩ := hf_int.aestronglyMeasurable.isSeparable_ae_range
+  let Y := (Submodule.span ℝ t).topologicalClosure
+  have hY : IsClosed (Y : Set E) := Submodule.isClosed_topologicalClosure _
+  have lem0 : ∀ᵐ a ∂μ, f a ∈ Y := by
+    filter_upwards [htt] with a ha using
+      (Submodule.closure_subset_topologicalClosure_span t) (subset_closure ha)
+  have : SecondCountableTopology Y := ht.span.closure.secondCountableTopology
+  exact μ.extendedCondLinearMean E hm |>.comp_mean_le
+    (hφ_cont.isClosed_re_epigraph hs) hφ_cvx.convex_epigraph hf_int hf hφ_int
+    (μ.extendedCondLinearMean_restrict E hm ⟨Y, hY⟩)
+    (μ.extendedCondLinearMean_conegligiblyInvariant E hm)
+    lem0
 
 /-- If `f` lies in a closed convex set `s` a.e., then `μ[f | m]` lies in `s` a.e. -/
 lemma Convex.condExp_mem (hm : m ≤ mα) [SigmaFinite (μ.trim hm)]
@@ -95,71 +128,6 @@ lemma Convex.condExp_mem (hm : m ≤ mα) [SigmaFinite (μ.trim hm)]
     hf_int.restrict hs (ae_restrict_of_ae hf)
   filter_upwards [h1, h2] with a ha hb
   simp_all
-
-/-- Conditional Jensen's inequality for hereditarily Lindelof Spaces. -/
-private lemma ConvexOn.map_condExp_le_of_hereditarilyLindelofSpace [IsFiniteMeasure μ]
-    [HereditarilyLindelofSpace E] (hm : m ≤ mα) (hφ_cvx : ConvexOn ℝ s φ)
-    (hφ_cont : LowerSemicontinuousOn φ s) (hf : ∀ᵐ a ∂μ, f a ∈ s) (hs : IsClosed s)
-    (hf_int : Integrable f μ) (hφ_int : Integrable (φ ∘ f) μ) :
-    ∀ᵐ a ∂μ, φ (μ[f | m] a) ≤ μ[φ ∘ f | m] a := by
-  obtain ⟨L, c, hLc1, hLc2⟩ := hφ_cvx.real_sSup_of_nat_affine_eq hs hφ_cont
-  have hp := ae_all_iff.2 fun i => (L i).comp_condExp_add_const_comm hm hf_int (c i)
-  have hw : ∀ᵐ a ∂μ, ∀ i : ℕ, μ[(L i) ∘ f + const α (c i) | m] a ≤ μ[φ ∘ f | m] a := by
-    refine ae_all_iff.2 fun i => condExp_mono ?_ hφ_int ?_
-    · exact ((L i).integrable_comp hf_int).add (integrable_const (c i))
-    · filter_upwards [hf] with a ha using hLc1 i ⟨f a, ha⟩
-  filter_upwards [hp, hw, hφ_cvx.1.condExp_mem hm hf_int hs hf] with a hp hw hq
-  rw [show φ (μ[f | m] a) = s.domRestrict φ ⟨μ[f | m] a, hq⟩ by simp, ← hLc2]
-  simpa [iSup_congr hp] using! ciSup_le hw
-
-/-- Conditional Jensen's inequality for finite measures. -/
-private theorem ConvexOn.map_condExp_le_of_isFiniteMeasure [IsFiniteMeasure μ] (hm : m ≤ mα)
-    (hφ_cvx : ConvexOn ℝ s φ) (hφ_cont : LowerSemicontinuousOn φ s) (hf : ∀ᵐ a ∂μ, f a ∈ s)
-    (hs : IsClosed s) (hf_int : Integrable f μ) (hφ_int : Integrable (φ ∘ f) μ) :
-    φ ∘ μ[f | m] ≤ᵐ[μ] μ[φ ∘ f | m] := by
-  borelize E
-  obtain ⟨t, ht, htt⟩ := hf_int.aestronglyMeasurable.isSeparable_ae_range
-  let Y := (Submodule.span ℝ t).topologicalClosure
-  have : CompleteSpace Y := (Submodule.isClosed_topologicalClosure _).completeSpace_coe
-  have : SecondCountableTopology Y := ht.span.closure.secondCountableTopology
-  let φY := φ ∘ Y.subtypeL
-  classical
-  let fY : α → Y := fun a => if h : f a ∈ Y then ⟨f a, h⟩ else 0
-  let fX : α → E := Y.subtypeL ∘ fY
-  have lem0 : ∀ᵐ a ∂μ, f a ∈ Y := by
-    filter_upwards [htt] with a ha using
-      (Submodule.closure_subset_topologicalClosure_span t) (subset_closure ha)
-  have lem1 : f =ᵐ[μ] fX := by
-    filter_upwards [lem0] with a ha
-    simp_all [fX, fY]
-  have hfY_int : Integrable fY μ := by
-    refine (hf_int.congr lem1).mono ?_ (by simp [fX])
-    obtain ⟨g, hg1, hg2, hg3⟩ := hf_int.1.exists_stronglyMeasurable_range_subset
-      ((Submodule.isClosed_topologicalClosure _).measurableSet) Nonempty.of_subtype lem0
-    refine ⟨codRestrict g Y hg2, (hg1.measurable.codRestrict hg2).stronglyMeasurable, ?_⟩
-    filter_upwards [hg3] with a ha
-    have : g a ∈ Y := hg2 a
-    simp_all [fY, codRestrict]
-  have lem2 : μ[f | m] =ᵐ[μ] Y.subtypeL ∘ μ[fY | m] := calc
-    _ =ᵐ[μ] μ[fX | m] := condExp_congr_ae lem1
-    _ =ᵐ[μ] _ := (Y.subtypeL.comp_condExp_comm hfY_int).symm
-  have lem3 : φ ∘ f =ᵐ[μ] φY ∘ fY := by filter_upwards [lem1] with a ha; simp [φY, ha, fX]
-  calc
-    φ ∘ μ[f | m]
-      =ᵐ[μ] φY ∘ μ[fY | m] := by filter_upwards [lem2] with a ha; simp [φY, ha]
-    _ ≤ᵐ[μ] μ[φY ∘ fY | m] := by
-      refine (hφ_cvx.comp_linearMap Y.subtype).map_condExp_le_of_hereditarilyLindelofSpace
-        (s := Y.subtypeL ⁻¹' s) hm ?_ ?_ ?_ hfY_int (Integrable.congr hφ_int lem3)
-      · exact hφ_cont.comp (by fun_prop) fun x => by
-          #adaptation_note /-- Before https://github.com/leanprover/lean4/pull/13166
-          (replacing grind's canonicalizer with a type-directed normalizer), `grind` closed this
-          goal. It is not yet clear whether this is due to defeq abuse in Mathlib or a problem
-          in the new canonicalizer; a minimization would help. The original proof was: `grind` -/
-          simp
-      · filter_upwards [lem0, hf] with a ha hb
-        simp_all [fY]
-      · exact hs.preimage Y.subtypeL.continuous
-    _ =ᵐ[μ] μ[φ ∘ f | m] := condExp_congr_ae lem3.symm
 
 /-- **Conditional Jensen's inequality**: in a Banach space `E` with a measure `μ` that is σ-finite
 on a sub-σ-algebra `m`, if `φ : E → ℝ` is convex and lower-semicontinuous on a closed set `s`, then

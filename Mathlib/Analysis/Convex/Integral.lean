@@ -5,6 +5,7 @@ Authors: Yury Kudryashov
 -/
 module
 
+public import Mathlib.Analysis.Convex.LinearMean.Basic
 public import Mathlib.Analysis.Convex.StrictConvexSpace
 public import Mathlib.MeasureTheory.Function.AEEqOfIntegral
 public import Mathlib.MeasureTheory.Integral.Average
@@ -49,37 +50,75 @@ variable {α E : Type*} {m0 : MeasurableSpace α} [NormedAddCommGroup E] [Normed
 ### Non-strict Jensen's inequality
 -/
 
+section
+
+variable (E μ) [IsProbabilityMeasure μ]
+
+noncomputable def IsProbabilityMeasure.extendedLinearMean : ExtendedLinearMean α ℝ E where
+  toMean f := ∫ x, f x ∂μ
+  L := { f | Integrable f μ }
+  add_mem hf hg := hf.add hg
+  smul_mem c f hf := hf.smul c
+  map_add' hf hg := integral_add hf hg
+  map_smul' c f _ := by simp_rw [Pi.smul_apply]; rw [integral_smul]
+  one_mem := integrable_const 1
+  map_one' := by simp
+  ℒ := { f | Integrable f μ }
+  toExtendedMean f := ∫ x, f x ∂μ
+  map_comp' l f hf := ⟨l.integrable_comp hf, l.integral_comp_comm hf⟩
+  monotoneOn' f hf g hg h := integral_mono hf hg h
+  conegligible := ae μ
+  mem_conegligible' {s} := by
+    rw [MeasureTheory.mem_ae_iff]
+    symm
+    constructor
+    · rintro ⟨f, hf, h0f, hsf, h0⟩
+      change ∫ x, f x ∂μ = 0 at h0
+      rw [integral_eq_zero_iff_of_nonneg h0f hf] at h0
+      unfold EventuallyEq Filter.Eventually at h0
+      rw [MeasureTheory.mem_ae_iff] at h0
+      simp only [Pi.zero_apply] at h0
+      rw [← le_zero_iff] at h0 ⊢
+      refine le_trans ?_ h0
+      apply measure_mono
+      grind
+    · intro hs
+      use sᶜ.indicator 1
+      have hs' := NullMeasurableSet.of_null hs
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · apply IntegrableOn.integrable_indicator₀
+        · exact integrableOn_const
+        · exact NullMeasurableSet.of_null hs
+      · apply Set.indicator_nonneg
+        simp
+      · intro x hx
+        classical
+        rw [Set.indicator_apply, ite_eq_left (mem_compl hx)]
+        simp
+      · rw [integral_indicator₀ hs']
+        simp only [Pi.one_apply, integral_const, MeasurableSet.univ, measureReal_restrict_apply,
+          univ_inter, smul_eq_mul, mul_one]
+        rwa [measureReal_eq_zero_iff]
+
+lemma IsProbabilityMeasure.extendedLinearMean_conegligible_def :
+    (extendedLinearMean E μ).conegligible = ae μ := by rfl
+
+lemma IsProbabilityMeasure.extendedLinearMean_conegligiblyInvariant :
+    extendedLinearMean E μ |>.conegligiblyInvariant where
+  mem_and_apply_eq _ hf _ hfg := ⟨hf.congr hfg, integral_congr_ae hfg⟩
+  mem_L_and_apply_M_eq _ hf _ hfg := ⟨hf.congr hfg, integral_congr_ae hfg⟩
+
+end
 
 /-- If `μ` is a probability measure on `α`, `s` is a convex closed set in `E`, and `f` is an
 integrable function sending `μ`-a.e. points to `s`, then the expected value of `f` belongs to `s`:
 `∫ x, f x ∂μ ∈ s`. See also `Convex.sum_mem` for a finite sum version of this lemma. -/
 theorem Convex.integral_mem [IsProbabilityMeasure μ] (hs : Convex ℝ s) (hsc : IsClosed s)
     (hf : ∀ᵐ x ∂μ, f x ∈ s) (hfi : Integrable f μ) : (∫ x, f x ∂μ) ∈ s := by
-  borelize E
-  rcases hfi.aestronglyMeasurable with ⟨g, hgm, hfg⟩
-  have : SeparableSpace (range g ∩ s : Set E) :=
-    (hgm.isSeparable_range.mono inter_subset_left).separableSpace
-  obtain ⟨y₀, h₀⟩ : (range g ∩ s).Nonempty := by
-    rcases (hf.and hfg).exists with ⟨x₀, h₀⟩
-    exact ⟨f x₀, by simp only [h₀.2, mem_range_self], h₀.1⟩
-  rw [integral_congr_ae hfg]; rw [integrable_congr hfg] at hfi
-  have hg : ∀ᵐ x ∂μ, g x ∈ closure (range g ∩ s) := by
-    filter_upwards [hfg.rw (fun _ y => y ∈ s) hf] with x hx
-    apply subset_closure
-    exact ⟨mem_range_self _, hx⟩
-  set G : ℕ → SimpleFunc α E := SimpleFunc.approxOn _ hgm.measurable (range g ∩ s) y₀ h₀
-  have : Tendsto (fun n => (G n).integral μ) atTop (𝓝 <| ∫ x, g x ∂μ) :=
-    tendsto_integral_approxOn_of_measurable hfi _ hg _ (integrable_const _)
-  refine hsc.mem_of_tendsto this (Eventually.of_forall fun n => hs.sum_mem ?_ ?_ ?_)
-  · exact fun _ _ => ENNReal.toReal_nonneg
-  · simp_rw [measureReal_def]
-    rw [← ENNReal.toReal_sum, (G n).sum_range_measure_preimage_singleton, measure_univ,
-      ENNReal.toReal_one]
-    finiteness
-  · simp only [SimpleFunc.mem_range, forall_mem_range]
-    intro x
-    apply (range g).inter_subset_right
-    exact SimpleFunc.approxOn_mem hgm.measurable h₀ _ _
+  have : IsProbabilityMeasure.extendedLinearMean E μ |>.conegligible.NeBot :=
+    show (ae μ).NeBot by infer_instance
+  exact IsProbabilityMeasure.extendedLinearMean_conegligiblyInvariant E μ |>.mem_convex
+    hsc hs hfi hf
 
 /-- If `μ` is a non-zero finite measure on `α`, `s` is a convex closed set in `E`, and `f` is an
 integrable function sending `μ`-a.e. points to `s`, then the average value of `f` belongs to `s`:
