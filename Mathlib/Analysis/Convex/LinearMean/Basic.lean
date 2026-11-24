@@ -26,7 +26,9 @@ section
 
 variable [Preorder R] [CommSemiring R] [IsOrderedAddMonoid R] [TopologicalSpace R]
 
-def LinearMean.toExtendedLinearMean (M : LinearMean E R) : ExtendedLinearMean E R R := {
+variable (M : LinearMean E R)
+
+def LinearMean.toExtendedLinearMean : ExtendedLinearMean E R R := {
   M with
   ℒ := M.L
   toExtendedMean := M.toMean
@@ -41,6 +43,16 @@ def LinearMean.toExtendedLinearMean (M : LinearMean E R) : ExtendedLinearMean E 
     rw [← ContinuousLinearMap.coe_coe, M.map_smul' _ hf, smul_eq_mul]
     conv_rhs => rw [← this]
 }
+
+variable {M}
+
+lemma LinearMean.ConegligiblyInvariant.toExtendedLinearMean
+  (h : M.ConegligiblyInvariant) : M.toExtendedLinearMean.ConegligiblyInvariant := {
+  h with
+  mem_and_apply_eq := h.mem_L_and_apply_M_eq
+}
+
+instance [M.conegligible.NeBot] : M.toExtendedLinearMean.conegligible.NeBot := by assumption
 
 end
 
@@ -80,11 +92,11 @@ def prodScalar : ExtendedLinearMean E R (B × R) := {
     rfl
 }
 
-namespace conegligiblyInvariant
+namespace ConegligiblyInvariant
 
 variable {ℳ}
 
-theorem prod_scalar (hℳ : ℳ.conegligiblyInvariant) : ℳ.prodScalar.conegligiblyInvariant where
+theorem prod_scalar (hℳ : ℳ.ConegligiblyInvariant) : ℳ.prodScalar.ConegligiblyInvariant where
   mem_and_apply_eq := fun _ ⟨hf₁, hf₂⟩ _ hg ↦
     have ⟨hg₁, hf₁⟩ := hℳ.mem_and_apply_eq hf₁ (hg.fun_comp _)
     have ⟨hg₂, hf₂⟩ := hℳ.mem_L_and_apply_M_eq hf₂ (hg.fun_comp _)
@@ -93,7 +105,7 @@ theorem prod_scalar (hℳ : ℳ.conegligiblyInvariant) : ℳ.prodScalar.coneglig
 
 instance [ℳ.conegligible.NeBot] : ℳ.prodScalar.conegligible.NeBot := by assumption
 
-end conegligiblyInvariant
+end ConegligiblyInvariant
 
 end
 
@@ -128,9 +140,9 @@ theorem map_mean_le (hs : IsClosed s) (hφ : ConvexOn ℝ s φ) (hφc : Continuo
     φ (ℳ f) ≤ ℳ.toLinearMean (φ ∘ f) :=
   ℳ.map_mean_le_of_epigraph (hs.epigraph hφc) hφ.convex_epigraph hf hfs hφf
 
-namespace conegligiblyInvariant
+namespace ConegligiblyInvariant
 
-variable [ℳ.conegligible.NeBot] {ℳ} (hℳ : ℳ.conegligiblyInvariant)
+variable [ℳ.conegligible.NeBot] {ℳ} (hℳ : ℳ.ConegligiblyInvariant)
 
 include hℳ
 
@@ -142,19 +154,20 @@ theorem mem_convex (hs₁ : IsClosed s) (hs₂ : Convex ℝ s)
   exact ℳ.mem_convex hs₁ hs₂ (hℳ.mem hf hff') h
 
 theorem map_mean_le_of_epigraph
-    (h_epigraph_closed : IsClosed {p : B × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2}) (hφ : ConvexOn ℝ s φ)
+    (h_epigraph_closed : IsClosed {p : B × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2})
+    (h_epigraph_convex : Convex ℝ {p : B × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2})
     (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s) (hφf : φ ∘ f ∈ ℳ.L) :
     φ (ℳ f) ≤ ℳ.toLinearMean (φ ∘ f) :=
-  hℳ.prod_scalar.mem_convex h_epigraph_closed hφ.convex_epigraph
+  hℳ.prod_scalar.mem_convex h_epigraph_closed h_epigraph_convex
     (f := fun x ↦ (f x, φ (f x))) ⟨hf, hφf⟩ (by simpa) |>.2
 
 /-- A generalization of Jensen's inequality by McShane. -/
 theorem map_mean_le (hs : IsClosed s) (hφ : ConvexOn ℝ s φ) (hφc : ContinuousOn φ s)
     (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s) (hφf : φ ∘ f ∈ ℳ.L) :
     φ (ℳ f) ≤ ℳ.toLinearMean (φ ∘ f) :=
-  hℳ.map_mean_le_of_epigraph (hs.epigraph hφc) hφ hf hfs hφf
+  hℳ.map_mean_le_of_epigraph (hs.epigraph hφc) hφ.convex_epigraph hf hfs hφf
 
-end conegligiblyInvariant
+end ConegligiblyInvariant
 
 end LocallyConvexSpace
 
@@ -170,7 +183,7 @@ private lemma helper₁ (s : Set B) (hs : s ⊆ vectorSpan ℝ s) :
     (fun _ _ _ _ hx hy ↦ Submodule.add_mem _ hx hy)
     (fun _ _ _ hx ↦ Submodule.smul_mem _ _ hx) hx
 
-variable {ℳ : ExtendedLinearMean E ℝ B} (hℳ : ℳ.conegligiblyInvariant)
+variable {ℳ : ExtendedLinearMean E ℝ B} (hℳ : ℳ.ConegligiblyInvariant)
   [ℳ.conegligible.NeBot] {s : Set B} [FiniteDimensional ℝ (vectorSpan ℝ s)] {f : E → B}
 
 include hℳ
@@ -183,7 +196,7 @@ private lemma mem_convex_aux (hs_convex : Convex ℝ s)
     (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s)
     {d : ℕ} (hd : d = finrank ℝ (vectorSpan ℝ s)) : ℳ f ∈ s := by
   induction d using Nat.strong_induction_on generalizing s with
-  | h d h_ind =>
+  | ind d h_ind =>
     by_contra h
     rw [hd] at h_ind
     have hℳfs : ℳ f ∈ closure s := hℳ.mem_convex isClosed_closure hs_convex.closure hf <|
@@ -194,7 +207,7 @@ private lemma mem_convex_aux (hs_convex : Convex ℝ s)
     let s₀ : Set B := ((· - ℳ f) '' s)
     -- since ℳ f ∈ closure s and p is closed itself, s₀ ⊆ p
     have hs₀p : s₀ ⊆ p := by
-      rw [← p.closed_of_finiteDimensional.closure_eq]
+      rw [← p.isClosed_of_finiteDimensional.closure_eq]
       apply subset_trans ?_ (closure_mono Submodule.subset_span)
       change _ ⊆ closure (s - s)
       rw [sub_eq_add_neg]
@@ -204,7 +217,7 @@ private lemma mem_convex_aux (hs_convex : Convex ℝ s)
       rintro x ⟨a, ha, rfl⟩
       apply Set.sub_mem_sub (subset_closure ha) hℳfs
     have hs₀ : s₀ = (AffineEquiv.vaddConst ℝ (- ℳ f)).toAffineMap '' s :=
-      Set.image_congr' fun _ ↦ sub_eq_add_neg ..
+      Set.image_congr fun _ _ ↦ sub_eq_add_neg ..
     -- s₀ as a subset of p
     let sₚ : Set p := ↑p ↓∩ s₀
     have hsₚ_convex : Convex ℝ sₚ := by
@@ -286,10 +299,10 @@ theorem mem_convex (hs_convex : Convex ℝ s) (hf : f ∈ ℳ.ℒ)
 
 variable {φ : B → ℝ}
 
-/-- A generalization of Jensen's inequality by Guseinov. -/
-theorem map_mean_le (hφ : ConvexOn ℝ s φ)
-    (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s)
-    (hφf : φ ∘ f ∈ ℳ.L) : φ (ℳ f) ≤ ℳ.toLinearMean (φ ∘ f) := by
+theorem map_mean_le_of_epigraph
+    (h_epigraph_convex : Convex ℝ {p : B × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2})
+    (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s) (hφf : φ ∘ f ∈ ℳ.L) :
+    φ (ℳ f) ≤ ℳ.toLinearMean (φ ∘ f) :=
   have : (vectorSpan ℝ s).prod (⊤ : Submodule ℝ ℝ) |>.FG := by
     apply Submodule.FG.prod
     · rwa [Submodule.fg_iff_finiteDimensional]
@@ -304,9 +317,64 @@ theorem map_mean_le (hφ : ConvexOn ℝ s φ)
     rw [Set.vsub_subset_iff]
     intro p hp q hq
     exact ⟨p.1, hp.1, q.1, hq.1, rfl⟩
-  exact mem_convex hℳ.prod_scalar hφ.convex_epigraph
-   (f := fun x ↦ (f x, φ (f x))) ⟨hf, hφf⟩ (by simpa) |>.2
+  mem_convex (f := fun x ↦ (f x, φ (f x))) hℳ.prod_scalar h_epigraph_convex ⟨hf, hφf⟩
+    (by simpa) |>.2
+
+/-- A generalization of Jensen's inequality by Guseinov. -/
+theorem map_mean_le (hφ : ConvexOn ℝ s φ)
+    (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s)
+    (hφf : φ ∘ f ∈ ℳ.L) : φ (ℳ f) ≤ ℳ.toLinearMean (φ ∘ f) :=
+  map_mean_le_of_epigraph hℳ hφ.convex_epigraph hf hfs hφf
 
 end FiniteDimensional
 
 end ExtendedLinearMean
+
+namespace LinearMean
+
+variable (M : LinearMean E ℝ) {s : Set ℝ} {f : E → ℝ} {φ : ℝ → ℝ}
+
+theorem mem_convex (hs₁ : IsClosed s) (hs₂ : Convex ℝ s)
+    (hf : f ∈ M.L) (hfs : ∀ x, f x ∈ s) : M f ∈ s :=
+  M.toExtendedLinearMean.mem_convex hs₁ hs₂ hf hfs
+
+theorem map_mean_le_of_epigraph
+    (h_epigraph_closed : IsClosed {p : ℝ × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2})
+    (h_epigraph_convex : Convex ℝ {p : ℝ × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2})
+    (hf : f ∈ M.L) (hfs : ∀ x, f x ∈ s) (hφf : φ ∘ f ∈ M.L) :
+    φ (M f) ≤ M (φ ∘ f) :=
+  M.toExtendedLinearMean.map_mean_le_of_epigraph h_epigraph_closed h_epigraph_convex hf hfs hφf
+
+/-- A generalization of Jensen's inequality by McShane. -/
+theorem map_mean_le (hs : IsClosed s) (hφ : ConvexOn ℝ s φ) (hφc : ContinuousOn φ s)
+    (hf : f ∈ M.L) (hfs : ∀ x, f x ∈ s) (hφf : φ ∘ f ∈ M.L) :
+    φ (M f) ≤ M (φ ∘ f) :=
+  M.toExtendedLinearMean.map_mean_le hs hφ hφc hf hfs hφf
+
+namespace ConegligiblyInvariant
+
+variable (hM : M.ConegligiblyInvariant) [M.conegligible.NeBot]
+
+include hM
+
+theorem mem_convex (hs : Convex ℝ s)
+    (hf : f ∈ M.L) (hfs : ∀ᶠ x in M.conegligible, f x ∈ s) : M f ∈ s :=
+  ExtendedLinearMean.FiniteDimensional.mem_convex hM.toExtendedLinearMean hs hf hfs
+
+theorem map_mean_le_of_epigraph
+    (h_epigraph_convex : Convex ℝ {p : ℝ × ℝ | p.1 ∈ s ∧ φ p.1 ≤ p.2})
+    (hf : f ∈ M.L) (hfs : ∀ᶠ x in M.conegligible, f x ∈ s) (hφf : φ ∘ f ∈ M.L) :
+    φ (M f) ≤ M (φ ∘ f) :=
+  ExtendedLinearMean.FiniteDimensional.map_mean_le_of_epigraph hM.toExtendedLinearMean
+    h_epigraph_convex hf hfs hφf
+
+/-- A generalization of Jensen's inequality by Guseinov. -/
+theorem map_mean_le (hφ : ConvexOn ℝ s φ)
+    (hf : f ∈ M.L) (hfs : ∀ᶠ x in M.conegligible, f x ∈ s) (hφf : φ ∘ f ∈ M.L) :
+    φ (M f) ≤ M (φ ∘ f) :=
+  ExtendedLinearMean.FiniteDimensional.map_mean_le hM.toExtendedLinearMean
+    hφ hf hfs hφf
+
+end ConegligiblyInvariant
+
+end LinearMean

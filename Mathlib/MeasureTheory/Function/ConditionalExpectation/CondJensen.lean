@@ -69,7 +69,7 @@ noncomputable def extendedCondLinearMean_restrict [IsFiniteMeasure μ] (hm : m �
     exact ⟨this, C.subtypeL.comp_condExp_comm this (m := m) |>.symm⟩
 
 lemma extendedCondLinearMean_conegligiblyInvariant [IsFiniteMeasure μ] (hm : m ≤ mα) :
-    extendedCondLinearMean E μ hm |>.conegligiblyInvariant where
+    extendedCondLinearMean E μ hm |>.ConegligiblyInvariant where
   mem_and_apply_eq _ hf _ hfg := ⟨hf.congr hfg, condExp_congr_ae hfg⟩
   mem_L_and_apply_M_eq _ hf _ hfg := ⟨hf.congr hfg, condExp_congr_ae hfg⟩
 

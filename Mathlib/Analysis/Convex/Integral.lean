@@ -78,7 +78,7 @@ noncomputable def IsProbabilityMeasure.extendedLinearMean : ExtendedLinearMean �
       unfold EventuallyEq Filter.Eventually at h0
       rw [MeasureTheory.mem_ae_iff] at h0
       simp only [Pi.zero_apply] at h0
-      rw [← le_zero_iff] at h0 ⊢
+      rw [← nonpos_iff_eq_zero] at h0 ⊢
       refine le_trans ?_ h0
       apply measure_mono
       grind
@@ -104,7 +104,7 @@ lemma IsProbabilityMeasure.extendedLinearMean_conegligible_def :
     (extendedLinearMean E μ).conegligible = ae μ := by rfl
 
 lemma IsProbabilityMeasure.extendedLinearMean_conegligiblyInvariant :
-    extendedLinearMean E μ |>.conegligiblyInvariant where
+    extendedLinearMean E μ |>.ConegligiblyInvariant where
   mem_and_apply_eq _ hf _ hfg := ⟨hf.congr hfg, integral_congr_ae hfg⟩
   mem_L_and_apply_M_eq _ hf _ hfg := ⟨hf.congr hfg, integral_congr_ae hfg⟩
 

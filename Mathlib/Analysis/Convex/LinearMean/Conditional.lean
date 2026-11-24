@@ -189,15 +189,15 @@ variable [Semiring R] [PartialOrder R] --[IsOrderedRing R]
   [AddCommMonoid B] [Module R B] [TopologicalSpace R] [TopologicalSpace B]
   (ℳ : ExtendedCondLinearMean E R B)
 
-structure conegligiblyInvariant where
+structure ConegligiblyInvariant where
   mem_and_apply_eq : ∀ ⦃f⦄, f ∈ ℳ.ℒ → ∀ ⦃g⦄, f =ᶠ[ℳ.conegligible] g →
     g ∈ ℳ.ℒ ∧ ℳ f =ᶠ[ℳ.conegligible] ℳ g
   mem_L_and_apply_M_eq : ∀ ⦃f⦄, f ∈ ℳ.L → ∀ ⦃g⦄, f =ᶠ[ℳ.conegligible] g →
     g ∈ ℳ.L ∧ ℳ.toCondLinearMean f =ᶠ[ℳ.conegligible] ℳ.toCondLinearMean g
 
-namespace conegligiblyInvariant
+namespace ConegligiblyInvariant
 
-variable {ℳ} (h : ℳ.conegligiblyInvariant)
+variable {ℳ} (h : ℳ.ConegligiblyInvariant)
 
 include h
 
@@ -239,7 +239,7 @@ theorem exists_of_eventually_L {f} {p : R → Prop} (hfL : f ∈ ℳ.L)
   split_ifs
   all_goals assumption
 
-end conegligiblyInvariant
+end ConegligiblyInvariant
 
 end OrderedSemiring
 
@@ -288,11 +288,11 @@ lemma prodScalar_apply (f) : ℳ.prodScalar f =
 
 lemma prodScalar_conegligible : ℳ.prodScalar.conegligible = ℳ.conegligible := rfl
 
-namespace conegligiblyInvariant
+namespace ConegligiblyInvariant
 
 variable {ℳ}
 
-theorem prodScalar (hℳ : ℳ.conegligiblyInvariant) : ℳ.prodScalar.conegligiblyInvariant where
+theorem prodScalar (hℳ : ℳ.ConegligiblyInvariant) : ℳ.prodScalar.ConegligiblyInvariant where
   mem_and_apply_eq := fun f ⟨hf₁, hf₂⟩ g hg ↦
     have ⟨hg₁, hf₁⟩ := hℳ.mem_and_apply_eq hf₁ (hg.fun_comp _)
     have ⟨hg₂, hf₂⟩ := hℳ.mem_L_and_apply_M_eq hf₂ (hg.fun_comp _)
@@ -301,7 +301,7 @@ theorem prodScalar (hℳ : ℳ.conegligiblyInvariant) : ℳ.prodScalar.conegligi
 
 instance [ℳ.conegligible.NeBot] : ℳ.prodScalar.conegligible.NeBot := by assumption
 
-end conegligiblyInvariant
+end ConegligiblyInvariant
 
 end prodScalar
 
@@ -395,7 +395,7 @@ theorem mem_convex_of_restrict
     (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s)
     {C : ClosedSubmodule ℝ B} [HereditarilyLindelofSpace C]
     (r : ℳ.Restrict C)
-    (hℳ : ℳ.conegligiblyInvariant)
+    (hℳ : ℳ.ConegligiblyInvariant)
     (hfC : ∀ᶠ x in ℳ.conegligible, f x ∈ C) :
       ∀ᶠ x in ℳ.conegligible, ℳ f x ∈ s := by
   classical
@@ -431,7 +431,7 @@ theorem comp_mean_le
     (hf : f ∈ ℳ.ℒ) (hfs : ∀ᶠ x in ℳ.conegligible, f x ∈ s) (hφf : φ ∘ f ∈ ℳ.L)
     {C : ClosedSubmodule ℝ B} [SecondCountableTopology C]
     (r : ℳ.Restrict C)
-    (hℳ : ℳ.conegligiblyInvariant)
+    (hℳ : ℳ.ConegligiblyInvariant)
     (hfC : ∀ᶠ x in ℳ.conegligible, f x ∈ C) :
     φ ∘ (ℳ f) ≤ᶠ[ℳ.conegligible] ℳ.toCondLinearMean (φ ∘ f) := by
   have : CountableInterFilter ℳ.prodScalar.conegligible := by assumption

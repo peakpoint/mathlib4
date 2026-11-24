@@ -95,6 +95,26 @@ theorem mem_conegligible {s : Set E} : s ∈ M.conegligible ↔
 
 end
 
+variable {E R} (M : LinearMean E R)
+
+structure ConegligiblyInvariant where
+  mem_L_and_apply_M_eq : ∀ ⦃f⦄, f ∈ M.L → ∀ ⦃g⦄, f =ᶠ[M.conegligible] g →
+    g ∈ M.L ∧ M f = M g
+
+namespace ConegligiblyInvariant
+
+variable {M}
+
+theorem mem_L (h : M.ConegligiblyInvariant) :
+    ∀ ⦃f⦄, f ∈ M.L → ∀ ⦃g⦄, f =ᶠ[M.conegligible] g → g ∈ M.L :=
+  fun _ hf _ hg ↦ (h.mem_L_and_apply_M_eq hf hg).1
+
+theorem apply_M_eq (h : M.ConegligiblyInvariant) :
+    ∀ ⦃f⦄, f ∈ M.L → ∀ ⦃g⦄, f =ᶠ[M.conegligible] g → M f = M g :=
+  fun _ hf _ hg ↦ (h.mem_L_and_apply_M_eq hf hg).2
+
+end ConegligiblyInvariant
+
 end LinearMean
 
 variable (B) [TopologicalSpace R] [TopologicalSpace B]
@@ -134,19 +154,16 @@ section OrderedSemiring
 
 variable (ℳ : ExtendedLinearMean E R B)
 
-structure conegligiblyInvariant where
+structure ConegligiblyInvariant extends ℳ.toLinearMean.ConegligiblyInvariant where
   mem_and_apply_eq : ∀ ⦃f⦄, f ∈ ℳ.ℒ → ∀ ⦃g⦄, f =ᶠ[ℳ.conegligible] g → g ∈ ℳ.ℒ ∧ ℳ f = ℳ g
-  mem_L_and_apply_M_eq : ∀ ⦃f⦄, f ∈ ℳ.L → ∀ ⦃g⦄, f =ᶠ[ℳ.conegligible] g →
-    g ∈ ℳ.L ∧ ℳ.toLinearMean f = ℳ.toLinearMean g
+namespace ConegligiblyInvariant
 
-namespace conegligiblyInvariant
-
-variable {ℳ} (h : ℳ.conegligiblyInvariant)
+variable {ℳ} (h : ℳ.ConegligiblyInvariant)
 
 include h
 
 theorem mem_L : ∀ ⦃f⦄, f ∈ ℳ.L → ∀ ⦃g⦄, f =ᶠ[ℳ.conegligible] g → g ∈ ℳ.L :=
-  fun _ hf _ hg ↦ (h.mem_L_and_apply_M_eq hf hg).1
+  h.toConegligiblyInvariant.mem_L
 
 theorem apply_M_eq : ∀ ⦃f⦄, f ∈ ℳ.L → ∀ ⦃g⦄, f =ᶠ[ℳ.conegligible] g →
     ℳ.toLinearMean f = ℳ.toLinearMean g :=
@@ -183,7 +200,7 @@ theorem exists_of_eventually_L {f} {p : R → Prop} (hfL : f ∈ ℳ.L)
   split_ifs
   all_goals assumption
 
-end conegligiblyInvariant
+end ConegligiblyInvariant
 
 end OrderedSemiring
 
